@@ -1,0 +1,70 @@
+#org: rimironenko
+#app: aws-serverless-framework-app
+service: items-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: java11
+  lambdaHashingVersion: 20201221
+  environment:
+    TABLE: ${self:service}-${sls:stage}-EmployeeDynamoDbTable-${sls:instanceId}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:DescribeTable
+        - dynamodb:Query
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.TABLE}"
+  stage: dev
+  region: us-east-1
+package:
+  artifact: target/aws-serverless-framework-app-dev.jar
+
+functions:
+  getItem:
+    handler: com.home.amazon.serverless.lambda.GetItemFunction
+    events:
+      - http:
+          path: /emps/{psno}
+          method: get
+  puttItem:
+    handler: com.home.amazon.serverless.lambda.PutItemFunction
+    events:
+      - http:
+          path: /emps
+          method: post
+  updatetItem:
+    handler: com.home.amazon.serverless.lambda.UpdateItemFunction
+    events:
+      - http:
+          path: /emps/{psno}
+          method: put
+  deletetItem:
+    handler: com.home.amazon.serverless.lambda.DeleteItemFunction
+    events:
+      - http:
+          path: /emps/{psno}
+          method: delete
+
+resources:
+  Resources:
+    EmployeeDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: psno
+            AttributeType: S
+        KeySchema:
+          - AttributeName: psno
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        SSESpecification:
+          SSEEnabled: true
+        TableName: ${self:provider.environment.TABLE}
